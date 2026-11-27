@@ -54,11 +54,11 @@ function PersonActions({ person }: { person: Person }) {
   );
 }
 
-function PersonCard({ person, isGuide = false }: { person: Person; isGuide?: boolean }) {
+function PersonCard({ person }: { person: Person }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <li className={`lp-person${isGuide ? ' lp-person-guide' : ''}${open ? ' is-open' : ''}`}>
+    <li className={`lp-person lp-person-guide${open ? ' is-open' : ''}`}>
       {person.photo ? (
         <img src={person.photo} alt="" className="lp-person-photo" />
       ) : (
@@ -69,26 +69,22 @@ function PersonCard({ person, isGuide = false }: { person: Person; isGuide?: boo
       <strong>{person.name}</strong>
       <span className="lp-person-role">{person.role}</span>
 
-      {isGuide && (
-        <>
-          <button
-            type="button"
-            className="lp-guide-toggle"
-            aria-expanded={open}
-            onClick={() => setOpen((v) => !v)}
-          >
-            Details <ChevronDown size={13} />
-          </button>
-          <div className="lp-guide-details">
-            <div className="lp-guide-details-inner">
-              {person.organisation && <p className="lp-guide-org">{person.organisation}</p>}
-              <p className="lp-guide-bio">
-                {person.bio || 'Additional guide details can be configured in Team.tsx.'}
-              </p>
-            </div>
-          </div>
-        </>
-      )}
+      <button
+        type="button"
+        className="lp-guide-toggle"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        Details <ChevronDown size={13} />
+      </button>
+      <div className="lp-guide-details">
+        <div className="lp-guide-details-inner">
+          {person.organisation && <p className="lp-guide-org">{person.organisation}</p>}
+          <p className="lp-guide-bio">
+            {person.bio || 'Additional details can be configured in Team.tsx.'}
+          </p>
+        </div>
+      </div>
 
       <PersonActions person={person} />
     </li>
@@ -113,7 +109,7 @@ export default function Team() {
           <h2 className="lp-team-head">Guide</h2>
           <ul className="lp-team">
             {GUIDES.map((p, i) => (
-              <PersonCard key={i} person={p} isGuide />
+              <PersonCard key={i} person={p} />
             ))}
           </ul>
 
