@@ -1,3 +1,6 @@
+import re
+import shutil
+import zipfile
 from contextlib import asynccontextmanager
 from hashlib import sha256
 from pathlib import Path
@@ -11,6 +14,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field
 from .archive import Archive
+from .pipeline import DEFAULT_OUT, ingest
 from .science import VERSION, inspect_netcdf, integrate, rainfall, read_scan
 
 MAX_FILE = 64 * 1024 * 1024
@@ -141,6 +145,93 @@ def delete_file(file_id: str):
             raise HTTPException(404, 'File not found in this local session.')
         record['_path'].unlink(missing_ok=True)
     return {'removed': file_id}
+
+
+# --- Import a zip archive or a folder of volumes into the processed archive ----------------------------------
+#
+# Flow: POST /api/imports → id; POST /api/imports/{id}/files (repeat, ≤ 500 files each); POST /api/imports/{id}/process.
+# Files are kept under data/imports/{id}: the archive reads full-resolution sweeps from the original source on demand.
+
+IMPORT_ROOT = DEFAULT_OUT.parent / 'imports'
+MAX_IMPORT = 16 * 1024 ** 3      # 16 GiB per import (roughly a month of volumes)
+MAX_FILES_PER_REQUEST = 500
+_import_id = re.compile(r'^[0-9a-f]{32}$')
+
+
+def _import_dir(import_id: str) -> Path:
+    if not _import_id.match(import_id):
+        raise HTTPException(404, 'Unknown import.')
+    path = IMPORT_ROOT / import_id
+    if not path.is_dir():
+        raise HTTPException(404, 'Unknown import. Start the upload again.')
+    return path
+
+
+def _dir_size(path: Path) -> int:
+    return sum(f.stat().st_size for f in path.iterdir() if f.is_file())
+
+
+@app.post('/api/imports')
+def create_import():
+    import_id = uuid4().hex
+    (IMPORT_ROOT / import_id).mkdir(parents=True, exist_ok=True)
+    return {'id': import_id}
+
+
+@app.post('/api/imports/{import_id}/files')
+def add_import_files(import_id: str, files: list[UploadFile] = File(...)):
+    folder = _import_dir(import_id)
+    if len(files) > MAX_FILES_PER_REQUEST:
+        raise HTTPException(413, f'Send at most {MAX_FILES_PER_REQUEST} files per request.')
+    total = _dir_size(folder)
+    saved = 0
+    for upload in files:
+        try:
+            name = (upload.filename or '').replace('\\', '/').split('/')[-1].strip()
+            if not name or name.startswith('.') or not name.lower().endswith(('.nc', '.zip')):
+                continue  # silently skip non-radar files picked up from a folder
+            target = folder / name
+            n = 1
+            while target.exists():  # same file name in two sub-folders
+                target = folder / f'{Path(name).stem}__{n}{Path(name).suffix}'; n += 1
+            with target.open('wb') as out:
+                while chunk := upload.file.read(1024 * 1024):
+                    total += len(chunk)
+                    if total > MAX_IMPORT:
+                        out.close(); target.unlink(missing_ok=True)
+                        raise HTTPException(413, 'This upload is larger than the 16 GiB limit.')
+                    out.write(chunk)
+            if target.suffix.lower() == '.zip' and not zipfile.is_zipfile(target):
+                target.unlink(missing_ok=True)
+                raise HTTPException(415, f'{name} is not a valid zip file.')
+            saved += 1
+        finally:
+            upload.file.close()
+    return {'saved': saved}
+
+
+@app.post('/api/imports/{import_id}/process')
+def process_import(import_id: str):
+    folder = _import_dir(import_id)
+    sources = [str(p) for p in folder.glob('*.zip')]
+    if any(folder.glob('*.nc')):
+        sources.append(str(folder))
+    try:
+        if not sources:
+            raise ValueError('No .nc or .zip files were received.')
+        with netcdf_lock:
+            catalogs = ingest(sources, DEFAULT_OUT, log=lambda *_: None)
+    except ValueError as exc:
+        shutil.rmtree(folder, ignore_errors=True)
+        msg = str(exc)
+        if 'No CfRadial volumes' in msg:
+            msg = 'No radar volumes were found. Files must be CfRadial .nc files named like cfrad.YYYYMMDD_HHMMSS…'
+        raise HTTPException(422, msg)
+    except zipfile.BadZipFile:
+        shutil.rmtree(folder, ignore_errors=True)
+        raise HTTPException(415, 'The zip file could not be read.')
+    return {'days': [{'date': c['date'], 'volume_count': c['volume_count'], 'failures': len(c['failures'])}
+                     for c in catalogs]}
 
 
 # --- Processed radar archive (see backend/pipeline.py) -------------------------------------------------------

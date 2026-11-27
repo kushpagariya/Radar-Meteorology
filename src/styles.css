@@ -3877,3 +3877,157 @@ select:focus-visible {
 .dataset-time {
   white-space: nowrap;
 }
+
+/* Upload area: Choose file + Choose folder side by side. */
+.library-import-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+@media (max-width: 640px) {
+  .library-import {
+    flex-wrap: wrap;
+  }
+  .library-import-actions {
+    margin-left: 0;
+  }
+}
+
+/* Workspace with no data loaded. */
+.workspace-empty {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 72px 24px;
+  margin-top: 8px;
+  border: 1px dashed #bdcdb1;
+  border-radius: 8px;
+  background: #fbfcf9;
+  text-align: center;
+  color: #5b6d68;
+}
+.workspace-empty h2 {
+  margin: 4px 0 0;
+  font-size: 22px;
+  color: #17302f;
+}
+.workspace-empty p {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+/* Regional map (Leaflet basemap + radar overlay). */
+.regional-map {
+  position: relative;
+  height: 560px;
+  min-width: 0;
+}
+.regional-map-canvas {
+  position: absolute;
+  inset: 0;
+  background: #dfe5dc;
+  font-family: inherit;
+}
+.rm-controls {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 800;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 70px);
+}
+.rm-bases {
+  display: flex;
+  background: #ffffff;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+.rm-bases button {
+  padding: 7px 12px;
+  font-size: 13px;
+  color: #2c4644;
+  background: #ffffff;
+}
+.rm-bases button[aria-pressed='true'] {
+  background: #17302f;
+  color: #ffffff;
+}
+.rm-check,
+.rm-opacity {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: #2c4644;
+  background: #ffffff;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+.rm-opacity input {
+  width: 80px;
+}
+.rm-recenter {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  color: #2c4644;
+  background: #ffffff;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+.rm-readout {
+  z-index: 800;
+  right: 120px;
+  pointer-events: none;
+}
+.regional-map .leaflet-control-attribution {
+  font-size: 9px;
+  opacity: 0.7;
+}
+.regional-map .leaflet-control-scale-line {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.6);
+}
+/* Faint range-ring labels; they should not compete with the radar echoes. */
+.rm-ring-label {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.7);
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.55);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.base-map .rm-ring-label,
+.base-terrain .rm-ring-label {
+  color: rgba(40, 60, 58, 0.5);
+  text-shadow: none;
+}
+.rm-place-tip {
+  font-size: 12px;
+  padding: 3px 7px;
+}
+@media (max-width: 640px) {
+  .regional-map {
+    height: 440px;
+  }
+  .rm-readout {
+    right: 17px;
+    bottom: 34px;
+  }
+}
+
+/* Minimal basemap treatments: muted satellite, soft greyscale hill shading for terrain. */
+.rm-tiles-satellite {
+  filter: saturate(0.55) brightness(1.06) contrast(0.9);
+}
+.rm-tiles-hillshade {
+  mix-blend-mode: multiply;
+  filter: contrast(1.35) brightness(1.05);
+}

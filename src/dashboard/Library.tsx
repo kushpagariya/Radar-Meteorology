@@ -10,10 +10,9 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react';
-import { colorFor, download, formatDay, TIMES, type ArchiveDaySummary } from '../data';
+import { colorFor, download, formatDay, type ArchiveDaySummary } from '../data';
 import type { Uploaded } from './useBackend';
 
-const DEMO_FILES = TIMES.map((t, i) => ({ t, i, name: `illustrative_volume_${t.replace(':', '')}.nc` }));
 
 export default function Library({
   archiveDays,
@@ -23,9 +22,9 @@ export default function Library({
   service,
   onUpload,
   onChoose,
+  onChooseFolder,
   onOpenUpload,
   onRemoveUpload,
-  onOpenDemo,
 }: {
   archiveDays: ArchiveDaySummary[];
   onOpenDay: (date: string) => void;
@@ -34,15 +33,14 @@ export default function Library({
   service: boolean;
   onUpload: (file: File) => void;
   onChoose: () => void;
+  onChooseFolder: () => void;
   onOpenUpload: (u: Uploaded) => void;
   onRemoveUpload: (u: Uploaded) => void;
-  onOpenDemo: (time: number) => void;
 }) {
   const [query, setQuery] = useState('');
   const [dragging, setDragging] = useState(false);
   const q = query.trim().toLowerCase();
   const files = uploads.filter((u) => u.name.toLowerCase().includes(q));
-  const demos = DEMO_FILES.filter((d) => d.name.includes(q));
 
   return (
     <>
@@ -51,9 +49,7 @@ export default function Library({
           <h2 id="archive-title">
             Radar archive <span>{archiveDays.length}</span>
           </h2>
-          <span className="archive-hint">
-            Processed with <code>python -m backend.pipeline ingest</code>
-          </span>
+          <span className="archive-hint">Full days loaded from a .zip file or a folder</span>
         </div>
         {archiveDays.length ? (
           <div className="archive-days">
@@ -102,7 +98,7 @@ export default function Library({
                     </div>
                   </dl>
                   <button className="btn btn-outline" onClick={() => onOpenDay(d.date)}>
-                    Explore day <ArrowUpRight size={14} />
+                    Open day <ArrowUpRight size={14} />
                   </button>
                 </article>
               );
@@ -111,8 +107,8 @@ export default function Library({
         ) : (
           <p className="insight-empty">
             {service
-              ? 'No processed days yet. Run the pipeline on a zip or folder of CfRadial volumes, then refresh.'
-              : 'Start the Python service to browse processed radar days.'}
+              ? 'No days loaded yet. Upload a .zip file or a folder of .nc files below.'
+              : 'The data service is not running. Start it with npm run backend.'}
           </p>
         )}
       </section>
@@ -133,23 +129,25 @@ export default function Library({
           {busy ? <LoaderCircle className="spin" size={24} /> : <Upload size={24} strokeWidth={1.4} />}
         </div>
         <div>
-          <h2>Bring your radar data</h2>
+          <h2>Upload radar data</h2>
           <p>
-            Drop a NetCDF file here, or choose a file. It is read on this machine by the local Python service
-            and never leaves it.
+            Choose a single .nc file, a .zip file of a day, or a folder of .nc files. A .zip file or folder is
+            loaded as full days.
           </p>
-          <span>
-            .nc files · up to 64 MiB ·{' '}
-            {service ? 'Python service connected' : 'start the Python service with npm run backend'}
-          </span>
+          <span>{service ? 'Data service connected' : 'Data service not running: start it with npm run backend'}</span>
         </div>
-        <button className="btn btn-outline" disabled={busy} onClick={onChoose}>
-          {busy ? 'Inspecting…' : 'Choose a file'}
-        </button>
+        <div className="library-import-actions">
+          <button className="btn btn-outline" disabled={busy} onClick={onChoose}>
+            {busy ? 'Please wait…' : 'Choose file'}
+          </button>
+          <button className="btn btn-outline" disabled={busy} onClick={onChooseFolder}>
+            Choose folder
+          </button>
+        </div>
       </div>
       <div className="library-heading">
         <h2>
-          Radar files <span>{DEMO_FILES.length + uploads.length}</span>
+          Single files <span>{uploads.length}</span>
         </h2>
         <label className="search-field">
           <Search size={15} />
@@ -192,12 +190,12 @@ export default function Library({
                 <td>
                   <span className="ready-state">
                     <Check size={12} />
-                    Inspected
+                    Loaded
                   </span>
                 </td>
                 <td>
                   <button className="text-button" disabled={!u.fields.length} onClick={() => onOpenUpload(u)}>
-                    Explore <ArrowUpRight size={14} />
+                    Open <ArrowUpRight size={14} />
                   </button>
                   <button
                     className="icon-button"
@@ -216,46 +214,31 @@ export default function Library({
                 </td>
               </tr>
             ))}
-            {demos.map(({ t, i, name }) => (
-              <tr key={t}>
-                <td>
-                  <FileText size={17} />
-                  <div>
-                    <strong>{name}</strong>
-                    <span>15 July 2026 · synthetic volume · 4 sweeps</span>
-                  </div>
-                </td>
-                <td>{t}:00 UTC</td>
-                <td>Illustrative</td>
-                <td>
-                  <span className="ready-state">
-                    <Check size={12} />
-                    Ready to explore
-                  </span>
-                </td>
-                <td>
-                  <button className="text-button" onClick={() => onOpenDemo(i)}>
-                    Explore <ArrowUpRight size={14} />
-                  </button>
-                </td>
-              </tr>
-            ))}
           </tbody>
         </table>
-        {!files.length && !demos.length && (
+        {!files.length && (
           <div className="empty-search">
             <Search size={24} />
-            <h3>No matching files</h3>
-            <p>Try a different filename or clear your search.</p>
-            <button className="btn btn-outline" onClick={() => setQuery('')}>
-              Clear search
-            </button>
+            {q ? (
+              <>
+                <h3>No matching files</h3>
+                <p>Try a different filename or clear your search.</p>
+                <button className="btn btn-outline" onClick={() => setQuery('')}>
+                  Clear search
+                </button>
+              </>
+            ) : (
+              <>
+                <h3>No single files uploaded</h3>
+                <p>Files chosen one at a time with Choose file appear here.</p>
+              </>
+            )}
           </div>
         )}
       </div>
       <p className="workspace-footnote">
-        Demonstration entries are generated in the browser; they are not original NetCDF files. Uploaded files
-        are temporary: they survive a page refresh but are removed when the backend stops.
+        Single .nc files are removed when the data service stops. Days loaded from a .zip file or folder are
+        kept.
       </p>
     </>
   );

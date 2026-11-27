@@ -133,7 +133,7 @@ export function exportPng(ctx: ExportContext) {
   ctx2.fillStyle = '#294c3e';
   ctx2.font = `${16 * k}px "DM Sans", sans-serif`;
   ctx2.fillText(
-    `Radar Metrology · ${VIEW_NAMES[state.view]} · ${units} · ${scan.synthetic ? 'SYNTHETIC DATA' : 'Uploaded scan'}`,
+    `Radar Meteorology · ${VIEW_NAMES[state.view]} · ${units} · ${scan.synthetic ? 'SYNTHETIC DATA' : 'Uploaded scan'}`,
     20 * k,
     28 * k,
   );
