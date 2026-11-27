@@ -828,6 +828,10 @@ select:focus-visible {
   margin-bottom: 26px;
   gap: 20px;
 }
+.page-heading-compact {
+  justify-content: flex-end;
+  margin-bottom: 14px;
+}
 .page-heading h1 {
   font-size: 27px;
   letter-spacing: -0.035em;
@@ -918,11 +922,128 @@ select:focus-visible {
   background: #e5f1ec;
   color: #2f6f5c;
 }
-.dataset-strip > .text-button {
+.dataset-actions {
   margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.dataset-actions > .text-button {
   font-size: 10px;
   color: #576850;
   white-space: nowrap;
+}
+.calendar-dropdown {
+  position: relative;
+}
+.calendar-trigger {
+  border: 1px solid #d5dfd1;
+  background: #ffffff;
+  color: #46613f;
+}
+.calendar-trigger.active,
+.calendar-trigger:hover {
+  background: #edf3ea;
+  border-color: #b7c8b2;
+}
+.calendar-popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 45;
+  width: 276px;
+  padding: 14px;
+  border: 1px solid #d8e2d3;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 14px 32px rgba(23, 48, 47, 0.14);
+}
+.calendar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.calendar-selects {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.calendar-selects select {
+  padding: 4px 6px;
+  border: 1px solid #d8e2d3;
+  border-radius: 4px;
+  background: #f9fbf7;
+  color: #243f3e;
+  font-size: 12px;
+  font-weight: 500;
+}
+.calendar-weekdays,
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  text-align: center;
+}
+.calendar-weekdays {
+  margin-bottom: 6px;
+  font-size: 10px;
+  font-weight: 500;
+  color: #677772;
+}
+.cal-day {
+  height: 32px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  display: inline-grid;
+  place-items: center;
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease;
+}
+.cal-day.is-unavailable {
+  color: #a9b5ae;
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.cal-day.is-available {
+  background: #e3f0ed;
+  border: 1px solid #b8d8d2;
+  color: #174c52;
+  font-weight: 600;
+}
+.cal-day.is-available:hover {
+  background: #cde5e0;
+  border-color: #236269;
+}
+.cal-day.is-selected {
+  background: #236269;
+  border-color: #236269;
+  color: #ffffff;
+}
+.cal-day.is-selected:hover {
+  background: #1b4f55;
+}
+.calendar-foot {
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid #e6ece2;
+  font-size: 11px;
+  color: #5c6858;
+}
+.calendar-foot span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.cal-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #236269;
 }
 .workspace-grid {
   display: grid;
@@ -1080,6 +1201,13 @@ select:focus-visible {
   background: #fff;
   box-shadow: 0 1px 3px #1f3c3014;
   color: #496840;
+}
+.plot-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 .plot-tag {
   font-size: 9px;
@@ -1911,7 +2039,14 @@ select:focus-visible {
   .plot-toolbar {
     padding-inline: 10px;
   }
-  .plot-tag {
+  .plot-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.plot-tag {
     display: none;
   }
   .plot-panel .radar-plot {
@@ -3356,6 +3491,13 @@ select:focus-visible {
 .plot-toolbar {
   min-width: 0;
 }
+.plot-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
 .plot-tag {
   flex-shrink: 0;
 }
@@ -4543,5 +4685,53 @@ select:focus-visible {
 .dashboard[data-theme='dark'] .regional-map .leaflet-popup-tip {
   background: #101d22;
   color: #e7f0ed;
+}
+.dashboard[data-theme='dark'] .dataset-actions > .text-button {
+  color: #5fd0c6;
+}
+.dashboard[data-theme='dark'] .calendar-trigger {
+  background: #142429;
+  border-color: #20343a;
+  color: #e7f0ed;
+}
+.dashboard[data-theme='dark'] .calendar-trigger.active,
+.dashboard[data-theme='dark'] .calendar-trigger:hover {
+  background: #193138;
+  border-color: #2e4b54;
+}
+.dashboard[data-theme='dark'] .calendar-popover {
+  background: #101d22;
+  border-color: #20343a;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55);
+}
+.dashboard[data-theme='dark'] .calendar-selects select {
+  background: #0b1519;
+  border-color: #20343a;
+  color: #e7f0ed;
+}
+.dashboard[data-theme='dark'] .calendar-weekdays,
+.dashboard[data-theme='dark'] .calendar-foot {
+  color: #8ea29d;
+  border-color: #20343a;
+}
+.dashboard[data-theme='dark'] .cal-day.is-unavailable {
+  color: #536661;
+}
+.dashboard[data-theme='dark'] .cal-day.is-available {
+  background: #143238;
+  border-color: #24535c;
+  color: #5fd0c6;
+}
+.dashboard[data-theme='dark'] .cal-day.is-available:hover {
+  background: #1a4149;
+  border-color: #5fd0c6;
+}
+.dashboard[data-theme='dark'] .cal-day.is-selected {
+  background: #5fd0c6;
+  border-color: #5fd0c6;
+  color: #052022;
+}
+.dashboard[data-theme='dark'] .cal-dot {
+  background: #5fd0c6;
 }
 

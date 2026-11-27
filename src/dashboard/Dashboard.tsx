@@ -31,6 +31,7 @@ import {
   type Scan,
 } from '../data';
 import ControlPanel from './ControlPanel';
+import CalendarDropdown from './CalendarDropdown';
 import Insights from './Insights';
 import Library from './Library';
 import Methods from './Methods';
@@ -457,7 +458,6 @@ export default function Dashboard({ page }: { page: Page }) {
             <span>{PAGE_TITLES[page]}</span>
           </div>
           <div className="topbar-right">
-            <span className="demo-badge">Prototype</span>
             {page === 'workspace' && (
               <button
                 className="icon-button"
@@ -489,36 +489,20 @@ export default function Dashboard({ page }: { page: Page }) {
           </div>
         </header>
         <main id="workspace-content" className="dashboard-main">
-          <div className="page-heading">
-            <div>
-              <h1>{PAGE_TITLES[page]}</h1>
-              <p>{PAGE_INTROS[page]}</p>
+          {page !== 'workspace' && (
+            <div className="page-heading">
+              <div>
+                <h1>{PAGE_TITLES[page]}</h1>
+                <p>{PAGE_INTROS[page]}</p>
+              </div>
+              {page === 'library' && (
+                <button className="btn btn-primary" disabled={busy} onClick={() => fileInput.current?.click()}>
+                  <Plus size={16} />
+                  Upload data
+                </button>
+              )}
             </div>
-            {page === 'workspace' ? (
-              <details className="export-menu" ref={exportMenu}>
-                <summary className="btn btn-outline">
-                  <Download size={15} />
-                  Export <ChevronDown size={14} />
-                </summary>
-                <div>
-                  <button disabled={!scan || busy} onClick={() => exportData('png')}>
-                    Current view image (.png)
-                  </button>
-                  <button disabled={!scan || busy} onClick={() => exportData('json')}>
-                    Data & provenance (.json)
-                  </button>
-                  <button disabled={!scan || busy} onClick={() => exportData('csv')}>
-                    Displayed gates (.csv)
-                  </button>
-                </div>
-              </details>
-            ) : page === 'library' ? (
-              <button className="btn btn-primary" disabled={busy} onClick={() => fileInput.current?.click()}>
-                <Plus size={16} />
-                Upload data
-              </button>
-            ) : null}
-          </div>
+          )}
           <input
             type="file"
             accept=".nc,.zip"
@@ -598,9 +582,17 @@ export default function Dashboard({ page }: { page: Page }) {
                 <span className={`data-badge ${demo ? '' : day ? 'observed' : 'uploaded'}`}>
                   {demo ? 'Synthetic data' : day ? 'Observed data' : 'Uploaded file'}
                 </span>
-                <button className="text-button" onClick={() => goTo('library')}>
-                  Change dataset <ArrowRight size={14} />
-                </button>
+                <div className="dataset-actions">
+                  <CalendarDropdown
+                    availableDates={archiveDays.map((d) => d.date)}
+                    selectedDate={day}
+                    onSelectDate={(date) => void openDay(date)}
+                    onOpen={() => void refreshUploads()}
+                  />
+                  <button className="text-button" onClick={() => goTo('library')}>
+                    Change dataset <ArrowRight size={14} />
+                  </button>
+                </div>
               </div>
               <div className="workspace-grid">
                 <ControlPanel
@@ -635,6 +627,25 @@ export default function Dashboard({ page }: { page: Page }) {
                   onDisplayed={setOverride}
                   onBusy={setViewBusy}
                   onSweeps={setSweeps}
+                  toolbarAction={
+                    <details className="export-menu" ref={exportMenu}>
+                      <summary className="btn btn-outline">
+                        <Download size={15} />
+                        Export <ChevronDown size={14} />
+                      </summary>
+                      <div>
+                        <button disabled={!scan || busy} onClick={() => exportData('png')}>
+                          Current view image (.png)
+                        </button>
+                        <button disabled={!scan || busy} onClick={() => exportData('json')}>
+                          Data & provenance (.json)
+                        </button>
+                        <button disabled={!scan || busy} onClick={() => exportData('csv')}>
+                          Displayed gates (.csv)
+                        </button>
+                      </div>
+                    </details>
+                  }
                 />
               </div>
               <Insights

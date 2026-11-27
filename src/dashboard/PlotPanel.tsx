@@ -197,6 +197,7 @@ type Props = {
   onSweeps: (s: Scan[]) => void;
   /** True while the active view is still loading; playback waits for it. */
   onBusy: (busy: boolean) => void;
+  toolbarAction?: React.ReactNode;
 };
 
 export default function PlotPanel(props: Props) {
@@ -622,11 +623,14 @@ export default function PlotPanel(props: Props) {
             </button>
           ))}
         </div>
-        <span className="plot-tag">
-          {state.view === 'accum' ? 'Accumulation' : fieldLabel}
-          <span className="plot-tag-dot" />
-          {state.view === 'section' ? `${sweeps.length} sweeps` : `${scan?.elevation.toFixed(1) ?? '—'}°`}
-        </span>
+        <div className="plot-toolbar-right">
+          <span className="plot-tag">
+            {state.view === 'accum' ? 'Accumulation' : fieldLabel}
+            <span className="plot-tag-dot" />
+            {state.view === 'section' ? `${sweeps.length} sweeps` : `${scan?.elevation.toFixed(1) ?? '—'}°`}
+          </span>
+          {props.toolbarAction}
+        </div>
       </div>
       <div id="plot-tabpanel" role="tabpanel" aria-labelledby={`tab-${state.view}`}>
         {body}
