@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import Dashboard from './dashboard/Dashboard';
 import { parseRoute } from './dashboard/state';
+import { ForgotPassword, Login, Register } from './landing/Auth';
 import Landing from './landing/Landing';
+import Team from './landing/Team';
 
 export default function App() {
   const [route, setRoute] = useState(window.location.hash);
@@ -13,5 +15,10 @@ export default function App() {
     window.addEventListener('hashchange', change);
     return () => window.removeEventListener('hashchange', change);
   }, []);
-  return route.startsWith('#/dashboard') ? <Dashboard page={parseRoute(route).page} /> : <Landing />;
+  if (route.startsWith('#/dashboard')) return <Dashboard page={parseRoute(route).page} />;
+  if (route.startsWith('#/login')) return <Login />;
+  if (route.startsWith('#/register')) return <Register />;
+  if (route.startsWith('#/forgot-password')) return <ForgotPassword />;
+  if (route.startsWith('#/team')) return <Team />;
+  return <Landing />;
 }

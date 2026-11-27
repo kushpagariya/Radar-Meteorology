@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CloudRain, GitCompare, LoaderCircle, Map, Play, Radar, Rows3, Square } from 'lucide-react';
 import Plot from '../Plot';
+import RegionalMap from '../RegionalMap';
 import { CrossSection } from '../charts';
 import {
   accumulate,
@@ -376,9 +377,9 @@ export default function PlotPanel(props: Props) {
       <div className="plot-empty">
         <Radar size={35} />
         <h3>No supported scan loaded</h3>
-        <p>Choose another source field or return to the illustrative volume.</p>
+        <p>Choose another field, or open other data from the Data library.</p>
         <button className="btn btn-outline" onClick={props.onUseDemo}>
-          Use demonstration data
+          Open Data library
         </button>
       </div>
     );
@@ -558,6 +559,23 @@ export default function PlotPanel(props: Props) {
         </div>
       </>
     );
+  } else if (state.view === 'map') {
+    body = (
+      <RegionalMap
+        scan={scan}
+        transform={transform}
+        units={units}
+        range={state.range}
+        min={state.min}
+        max={state.max}
+        rings={state.rings}
+        threshold={state.threshold}
+        pin={state.pin}
+        onPin={(pin) => set({ pin })}
+        label={day ? `${catalog!.site.name} · ${timeLabel(state.time)}` : undefined}
+        canvasRef={canvasRef}
+      />
+    );
   } else {
     body = (
       <Plot
@@ -567,7 +585,7 @@ export default function PlotPanel(props: Props) {
         range={state.range}
         min={state.min}
         max={state.max}
-        map={state.view === 'map'}
+        map={false}
         rings={state.rings}
         threshold={state.threshold}
         pin={state.pin}

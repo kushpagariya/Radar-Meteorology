@@ -5,19 +5,10 @@ export default function Methods({ service }: { service: boolean }) {
   return (
     <div className="methods-layout">
       <article>
-        <h2>A demonstration with explicit boundaries.</h2>
+        <h2>Data and methods</h2>
         <p>
-          This is an independent research prototype for Radar Metrology – Mahabaleshwar. Its purpose is to
-          demonstrate the experience and scientific processing approach before a production database or
-          authentication system is introduced.
-        </p>
-        <h3>Demonstration data</h3>
-        <p>
-          The six scans and four elevation settings are synthetic, deterministic examples. Their dates, echoes
-          and values are illustrative; echoes weaken with beam height so the cross-section shows a plausible
-          vertical structure. The location uses an approximate HACPL reference at 17.92° N, 73.60° E; it is
-          not a verified antenna coordinate. The 82.5 km demonstration range is a design setting, not an
-          instrument specification.
+          Radar Meteorology – Mahabaleshwar is a research tool for viewing and analysing data from the
+          Mahabaleshwar X-band Doppler Weather Radar.
         </p>
         <h3>Observed radar data</h3>
         <p>

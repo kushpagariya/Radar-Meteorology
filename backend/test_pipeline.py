@@ -138,3 +138,63 @@ class PipelineTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class ImportApiTests(unittest.TestCase):
+    """Upload a zip or a folder's files through /api/imports and get processed days back."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(); self.dir = Path(self.tmp.name)
+        self.saved = (app_module.archive, app_module.DEFAULT_OUT, app_module.IMPORT_ROOT)
+        app_module.archive = Archive(self.dir / 'archive')
+        app_module.DEFAULT_OUT = self.dir / 'archive'
+        app_module.IMPORT_ROOT = self.dir / 'imports'
+        self.volumes = []
+        for hhmm in ('0000', '0010', '0020'):
+            path = self.dir / f'cfrad.20250915_{hhmm}08.000_to_20250915_{hhmm}59.000_MBL_SUR.nc'
+            write_volume(path, start=f'2025-09-15T{hhmm[:2]}:{hhmm[2:]}:08Z')
+            self.volumes.append(path)
+
+    def tearDown(self):
+        app_module.archive, app_module.DEFAULT_OUT, app_module.IMPORT_ROOT = self.saved
+        self.tmp.cleanup()
+
+    def _import(self, client, files):
+        import_id = client.post('/api/imports').json()['id']
+        r = client.post(f'/api/imports/{import_id}/files', files=files)
+        self.assertEqual(r.status_code, 200, r.text)
+        return client.post(f'/api/imports/{import_id}/process')
+
+    def test_zip_import_creates_day(self):
+        zpath = self.dir / 'day.zip'
+        with zipfile.ZipFile(zpath, 'w') as zf:
+            for v in self.volumes:
+                zf.write(v, f'full_sweeps/{v.name}')
+        with TestClient(app_module.app) as client:
+            r = self._import(client, [('files', ('day.zip', zpath.read_bytes(), 'application/zip'))])
+            self.assertEqual(r.status_code, 200, r.text)
+            self.assertEqual(r.json()['days'], [{'date': '2025-09-15', 'volume_count': 3, 'failures': 0}])
+            self.assertEqual(client.get('/api/archive').json()[0]['date'], '2025-09-15')
+            self.assertEqual(client.get('/api/archive/2025-09-15/volumes/0/sweep').status_code, 200)
+
+    def test_folder_import_skips_other_files(self):
+        files = [('files', (f'day/{v.name}', v.read_bytes(), 'application/x-netcdf')) for v in self.volumes]
+        files.append(('files', ('day/notes.txt', b'hello', 'text/plain')))
+        with TestClient(app_module.app) as client:
+            r = self._import(client, files)
+            self.assertEqual(r.status_code, 200, r.text)
+            self.assertEqual(r.json()['days'][0]['volume_count'], 3)
+
+    def test_unnamed_volumes_are_rejected(self):
+        with TestClient(app_module.app) as client:
+            r = self._import(client, [('files', ('random.nc', self.volumes[0].read_bytes(), 'application/x-netcdf'))])
+            self.assertEqual(r.status_code, 422)
+            self.assertIn('No radar volumes', r.json()['detail'])
+
+    def test_bad_zip_and_unknown_import(self):
+        with TestClient(app_module.app) as client:
+            import_id = client.post('/api/imports').json()['id']
+            r = client.post(f'/api/imports/{import_id}/files', files=[('files', ('x.zip', b'not a zip', 'application/zip'))])
+            self.assertEqual(r.status_code, 415)
+            self.assertEqual(client.post('/api/imports/../../etc/process').status_code, 404)
+            self.assertEqual(client.post('/api/imports/' + '0' * 32 + '/process').status_code, 404)

@@ -56,16 +56,20 @@ const PAGE_TITLES: Record<Page, string> = {
   methods: 'Data & methodology',
 };
 const PAGE_INTROS: Record<Page, string> = {
-  workspace: 'Reflectivity across space, height and time — every number with its method.',
-  library: 'Inspect, select and manage your radar inputs. Files stay on this machine.',
-  methods: 'Understand the inputs, methods and limits of this prototype.',
+  workspace: 'View radar data by elevation, cross-section and time.',
+  library: 'Upload radar files and open processed days.',
+  methods: 'Data sources, methods and limitations.',
 };
+
+/** Opening a day or file starts at the radar's full range (MBL-RADAR: 1133 gates × 150 m = 169.8 km);
+ * the value is clamped to the last gate once the first sweep loads. */
+const FULL_RANGE = 2000;
 
 export default function Dashboard({ page }: { page: Page }) {
   const [state, setState] = useState<ViewState>(() => readState(parseRoute(window.location.hash).params));
   const set = useCallback((patch: Partial<ViewState>) => setState((s) => ({ ...s, ...patch })), []);
   const [playing, setPlaying] = useState(false);
-  const { service, setService, uploads, setUploads, archiveDays } = useBackend();
+  const { service, setService, uploads, setUploads, archiveDays, refreshUploads } = useBackend();
   const [catalog, setCatalog] = useState<ArchiveCatalog | null>(null);
   const [realScan, setRealScan] = useState<Scan | null>(null);
   const [sourceField, setSourceField] = useState('');
@@ -77,8 +81,13 @@ export default function Dashboard({ page }: { page: Page }) {
   const [sweeps, setSweeps] = useState<Scan[]>([]);
   const canvas = useRef<HTMLCanvasElement>(null),
     fileInput = useRef<HTMLInputElement>(null),
+    folderInput = useRef<HTMLInputElement>(null),
     exportMenu = useRef<HTMLDetailsElement>(null),
     request = useRef(0);
+
+  useEffect(() => {
+    folderInput.current?.setAttribute('webkitdirectory', '');
+  }, []);
 
   const demo = state.source === 'demo';
   const day = isDay(state.source) ? dayOf(state.source) : null;
@@ -140,7 +149,7 @@ export default function Dashboard({ page }: { page: Page }) {
       .then(setCatalog)
       .catch((e) => {
         if (e.name === 'AbortError') return;
-        setNotice(`${e.message} Showing the demonstration volume.`);
+        setNotice(`${e.message} Choose data from the Data library.`);
         set({ source: 'demo', time: DEFAULTS.time, elevation: 0.5, range: DEMO_RANGE_KM });
       });
     return () => controller.abort();
@@ -158,12 +167,21 @@ export default function Dashboard({ page }: { page: Page }) {
       if (!uploads.some((u) => u.id === state.source)) {
         set({ source: 'demo', range: DEMO_RANGE_KM });
         setNotice(
-          'That uploaded file is no longer in this backend session. Showing the demonstration volume.',
+          'That uploaded file is no longer available. Choose data from the Data library.',
         );
       }
     }, 1500);
     return () => clearTimeout(t);
   }, [demo, day, service, uploads, state.source, set]);
+
+  // With nothing selected, open the most recent loaded day automatically.
+  const autoOpened = useRef(false);
+  useEffect(() => {
+    if (page !== 'workspace' || !demo || autoOpened.current || !archiveDays.length) return;
+    autoOpened.current = true;
+    void openDay(archiveDays[archiveDays.length - 1].date);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, demo, archiveDays]);
 
   // Read the selected sweep from an uploaded file or an archive volume.
   const scanUrl = demo
@@ -239,7 +257,7 @@ export default function Dashboard({ page }: { page: Page }) {
         elevation: c.fixed_angles[0],
         view: 'ppi',
         pin: null,
-        range: 120,
+        range: FULL_RANGE,
       };
       setState(next);
       window.location.hash = pageHash('workspace', writeState(next));
@@ -253,9 +271,61 @@ export default function Dashboard({ page }: { page: Page }) {
     set({ ...DEFAULTS, source: state.source, range: activeRange });
   }
 
+  /** Uploads a zip, or the .nc files of a folder, and processes them into full days. */
+  async function importFiles(files: File[]) {
+    const radar = files.filter((f) => /\.(nc|zip)$/i.test(f.name));
+    if (!radar.length) return setNotice('No .nc or .zip files were found in that selection.');
+    const BATCH = 100;
+    setBusy(true);
+    setNotice('');
+    const fail = async (r: Response, fallback: string) => {
+      let detail = fallback;
+      try {
+        const d = await r.json();
+        if (typeof d.detail === 'string') detail = d.detail;
+      } catch {
+        /* not JSON */
+      }
+      throw new Error(detail);
+    };
+    try {
+      const created = await fetch('/api/imports', { method: 'POST' }).catch(() => null);
+      if (!created || !created.ok)
+        throw new Error('The data service is not running. Start it with npm run backend, then try again.');
+      const { id } = await created.json();
+      for (let i = 0; i < radar.length; i += BATCH) {
+        setNotice(`Uploading files… ${Math.min(i + BATCH, radar.length)} of ${radar.length}`);
+        const form = new FormData();
+        radar.slice(i, i + BATCH).forEach((f) => form.append('files', f));
+        const r = await fetch(`/api/imports/${id}/files`, { method: 'POST', body: form });
+        if (!r.ok) await fail(r, 'The upload failed.');
+      }
+      setNotice('Processing radar volumes. A full day can take a few minutes…');
+      const r = await fetch(`/api/imports/${id}/process`, { method: 'POST' });
+      if (!r.ok) await fail(r, 'The files could not be processed.');
+      const { days } = (await r.json()) as { days: { date: string; volume_count: number }[] };
+      setService(true);
+      await refreshUploads();
+      const summary = days.map((d) => `${formatDay(d.date)} (${d.volume_count} volumes)`).join(', ');
+      if (days.length === 1) {
+        setNotice(`Loaded ${summary}.`);
+        await openDay(days[0].date);
+      } else {
+        setNotice(`Loaded ${days.length} days: ${summary}. Choose a day under Radar archive.`);
+      }
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : 'The files could not be loaded.');
+    } finally {
+      setBusy(false);
+      if (fileInput.current) fileInput.current.value = '';
+      if (folderInput.current) folderInput.current.value = '';
+    }
+  }
+
   async function upload(file: File) {
+    if (file.name.toLowerCase().endsWith('.zip')) return importFiles([file]);
     if (!file.name.toLowerCase().endsWith('.nc'))
-      return setNotice('Choose a NetCDF file with the .nc extension.');
+      return setNotice('Choose a NetCDF (.nc) file or a .zip file.');
     if (file.size > 64 * 1024 * 1024) return setNotice('This local prototype accepts files up to 64 MiB.');
     setBusy(true);
     setNotice('');
@@ -267,15 +337,15 @@ export default function Dashboard({ page }: { page: Page }) {
       try {
         data = await r.json();
       } catch {
-        throw new Error('Start the local Python service with npm run backend, then try again.');
+        throw new Error('The data service is not running. Start it with npm run backend, then try again.');
       }
       if (!r.ok)
         throw new Error(typeof data.detail === 'string' ? data.detail : 'The file could not be inspected.');
       setUploads((prev) => [...prev, data]);
       setService(true);
-      setNotice(`${file.name} inspected. Select Explore to view its reflectivity fields.`);
+      setNotice(`${file.name} loaded. Select Open to view it.`);
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : 'Start the Python service to inspect NetCDF files.');
+      setNotice(e instanceof Error ? e.message : 'The data service is not running.');
     } finally {
       setBusy(false);
       if (fileInput.current) fileInput.current.value = '';
@@ -286,7 +356,7 @@ export default function Dashboard({ page }: { page: Page }) {
     setSourceField(item.fields[0]?.name || '');
     setSweep(0);
     setPlaying(false);
-    const next = { ...state, source: item.id, view: 'ppi' as const, pin: null };
+    const next = { ...state, source: item.id, view: 'ppi' as const, pin: null, range: FULL_RANGE };
     setState(next);
     window.location.hash = pageHash('workspace', writeState(next));
   }
@@ -340,7 +410,7 @@ export default function Dashboard({ page }: { page: Page }) {
         Skip to workspace
       </a>
       <aside className="sidebar">
-        <a href="#/" className="sidebar-brand" aria-label="Return to exhibition">
+        <a href="#/" className="sidebar-brand" aria-label="Back to home page">
           <Brand />
         </a>
         <div className="sidebar-section-label">RESEARCH WORKSPACE</div>
@@ -355,7 +425,7 @@ export default function Dashboard({ page }: { page: Page }) {
               <Icon size={18} strokeWidth={1.5} />
               {label}
               {id === 'library' && (
-                <span className="nav-count">{TIMES.length + uploads.length + archiveDays.length}</span>
+                <span className="nav-count">{uploads.length + archiveDays.length}</span>
               )}
             </button>
           ))}
@@ -367,11 +437,11 @@ export default function Dashboard({ page }: { page: Page }) {
           </button>
           <a href="#/">
             <ArrowLeft size={17} />
-            Back to exhibition
+            Back to home
           </a>
           <div className="prototype-note">
-            <span className="status-dot" /> Demonstration prototype
-            <span>No account required. Files stay on this machine, in the local backend session.</span>
+            <span className="status-dot" /> Prototype
+            <span>Files stay on this computer.</span>
           </div>
         </div>
       </aside>
@@ -433,18 +503,28 @@ export default function Dashboard({ page }: { page: Page }) {
             ) : page === 'library' ? (
               <button className="btn btn-primary" disabled={busy} onClick={() => fileInput.current?.click()}>
                 <Plus size={16} />
-                Import NetCDF
+                Upload data
               </button>
             ) : null}
           </div>
           <input
             type="file"
-            accept=".nc"
+            accept=".nc,.zip"
             ref={fileInput}
             className="visually-hidden"
-            aria-label="Upload a NetCDF radar file"
+            aria-label="Choose a radar file (.nc or .zip)"
             onChange={(e) => {
               if (e.target.files?.[0]) void upload(e.target.files[0]);
+            }}
+          />
+          <input
+            type="file"
+            multiple
+            ref={folderInput}
+            className="visually-hidden"
+            aria-label="Choose a folder of radar files"
+            onChange={(e) => {
+              if (e.target.files?.length) void importFiles(Array.from(e.target.files));
             }}
           />
           {notice && (
@@ -456,7 +536,18 @@ export default function Dashboard({ page }: { page: Page }) {
               </button>
             </div>
           )}
-          {page === 'workspace' && (
+          {page === 'workspace' && demo && (
+            <div className="workspace-empty">
+              <Layers size={30} strokeWidth={1.4} />
+              <h2>No radar data loaded</h2>
+              <p>Upload a .zip file of a day, a folder of .nc files, or a single .nc file.</p>
+              <button className="btn btn-primary" onClick={() => goTo('library')}>
+                <Plus size={16} />
+                Upload data
+              </button>
+            </div>
+          )}
+          {page === 'workspace' && !demo && (
             <>
               <div className="dataset-strip">
                 <div className="dataset-icon">
@@ -526,7 +617,7 @@ export default function Dashboard({ page }: { page: Page }) {
                   units={units}
                   playing={playing}
                   setPlaying={setPlaying}
-                  onUseDemo={() => selectDemo()}
+                  onUseDemo={() => goTo('library')}
                   onMethods={() => goTo('methods')}
                   canvasRef={canvas}
                   onDisplayed={setOverride}
@@ -563,24 +654,18 @@ export default function Dashboard({ page }: { page: Page }) {
               service={service}
               onUpload={(f) => void upload(f)}
               onChoose={() => fileInput.current?.click()}
+              onChooseFolder={() => folderInput.current?.click()}
               onOpenUpload={openUpload}
               onRemoveUpload={(u) => void removeUpload(u)}
-              onOpenDemo={(t) => {
-                setRealScan(null);
-                setSourceField('');
-                const next = { ...state, source: 'demo', time: t, elevation: 0.5, range: DEMO_RANGE_KM };
-                setState(next);
-                window.location.hash = pageHash('workspace', writeState(next));
-              }}
             />
           )}
           {page === 'methods' && <Methods service={service} />}
         </main>
         <footer className="workspace-footer">
-          <span>Radar Metrology · Mahabaleshwar</span>
+          <span>Radar Meteorology · Mahabaleshwar</span>
           <span>
             <span className={`status-dot ${service ? 'connected' : ''}`} />
-            {service ? 'Local Python service connected' : 'Browser demonstration'}
+            {service ? 'Data service connected' : 'Data service not running'}
             <span className="footer-version">v0.2</span>
           </span>
         </footer>
