@@ -1,0 +1,14 @@
+#!/bin/sh
+# commit-msg hook: strip any AI-assistant attribution so commits credit only the human author.
+# Removes Co-Authored-By trailers naming Claude/Anthropic and "Generated with ... Claude" footers.
+MSG_FILE="$1"
+TMP="$MSG_FILE.tmp"
+
+grep -viE '^[[:space:]]*co-authored-by:.*(claude|anthropic)' "$MSG_FILE" \
+  | grep -viE 'generated (with|by).*claude' \
+  | grep -viE 'noreply@anthropic\.com' > "$TMP"
+
+# Trim trailing blank lines left behind by the removal.
+awk 'NF{for(i=0;i<blank;i++)print ""; blank=0; print; next} {blank++}' "$TMP" > "$MSG_FILE"
+rm -f "$TMP"
+exit 0
