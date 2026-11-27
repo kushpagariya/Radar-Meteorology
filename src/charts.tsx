@@ -31,6 +31,17 @@ export function CrossSection({
   const own = useRef<HTMLCanvasElement>(null),
     ref = canvasRef || own;
   const [probe, setProbe] = useState<{ r: number; h: number; v: number | null; el: number } | null>(null);
+  const [dark, setDark] = useState(false);
+
+  useEffect(() => {
+    const host = ref.current?.closest('[data-theme]');
+    if (!host) return;
+    const sync = () => setDark(host.getAttribute('data-theme') === 'dark');
+    sync();
+    const mo = new MutationObserver(sync);
+    mo.observe(host, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => mo.disconnect();
+  }, [ref]);
   const topKm = Math.min(
     16,
     Math.max(4, Math.ceil(Math.max(...sweeps.map((s) => beamHeight(range, s.elevation + beamwidth / 2))))),
@@ -48,7 +59,7 @@ export function CrossSection({
       canvas.height = h * dpr;
       const ctx = canvas.getContext('2d')!;
       ctx.scale(dpr, dpr);
-      ctx.fillStyle = '#f8faf8';
+      ctx.fillStyle = dark ? '#0b1519' : '#f8faf8';
       ctx.fillRect(0, 0, w, h);
       const pw = w - pad.l - pad.r,
         ph = h - pad.t - pad.b;
@@ -56,10 +67,10 @@ export function CrossSection({
         Y = (km: number) => pad.t + ph - (km / topKm) * ph;
 
       // Grid
-      ctx.strokeStyle = '#dfe6dd';
+      ctx.strokeStyle = dark ? '#1e3138' : '#dfe6dd';
       ctx.lineWidth = 1;
       ctx.font = '11px "DM Sans", sans-serif';
-      ctx.fillStyle = '#5c6a64';
+      ctx.fillStyle = dark ? '#9bb0aa' : '#5c6a64';
       for (let k = 0; k <= topKm; k += topKm > 8 ? 2 : 1) {
         ctx.beginPath();
         ctx.moveTo(pad.l, Y(k));
@@ -97,7 +108,7 @@ export function CrossSection({
           ctx.fill();
         });
         // Beam centre line and elevation label
-        ctx.strokeStyle = '#2f4f4c55';
+        ctx.strokeStyle = dark ? 'rgba(155, 176, 170, 0.38)' : '#2f4f4c55';
         ctx.setLineDash([2, 4]);
         ctx.beginPath();
         for (let r = 0; r <= range; r += range / 60) {
@@ -107,7 +118,7 @@ export function CrossSection({
         }
         ctx.stroke();
         ctx.setLineDash([]);
-        ctx.fillStyle = '#35514d';
+        ctx.fillStyle = dark ? '#c8d6d2' : '#35514d';
         ctx.textAlign = 'left';
         // Label where the beam centre leaves the plot (right edge or top), skipping overlaps.
         const hEnd = beamHeight(range, s.elevation);
@@ -125,7 +136,7 @@ export function CrossSection({
         }
       }
       if (pinRange != null && pinRange <= range) {
-        ctx.strokeStyle = '#1e3f3f';
+        ctx.strokeStyle = dark ? '#e7f0ed' : '#1e3f3f';
         ctx.setLineDash([3, 3]);
         ctx.beginPath();
         ctx.moveTo(X(pinRange), pad.t);
@@ -133,7 +144,7 @@ export function CrossSection({
         ctx.stroke();
         ctx.setLineDash([]);
       }
-      ctx.strokeStyle = '#9fb0a8';
+      ctx.strokeStyle = dark ? '#354d54' : '#9fb0a8';
       ctx.beginPath();
       ctx.moveTo(pad.l, pad.t + ph);
       ctx.lineTo(w - pad.r, pad.t + ph);
@@ -143,7 +154,7 @@ export function CrossSection({
     observer.observe(canvas);
     draw();
     return () => observer.disconnect();
-  }, [sweeps, azimuth, range, min, max, transform, topKm, pinRange, ref, beamwidth]);
+  }, [sweeps, azimuth, range, min, max, transform, topKm, pinRange, ref, beamwidth, dark]);
 
   function move(e: React.PointerEvent<HTMLCanvasElement>) {
     const box = e.currentTarget.getBoundingClientRect();

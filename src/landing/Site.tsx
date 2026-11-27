@@ -1,10 +1,10 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { ArrowUpRight, Moon, Sun } from 'lucide-react';
 import { Brand } from '../Brand';
+import { useTheme, type Theme } from '../theme';
 import '../landing.css';
 
-export type Theme = 'light' | 'dark';
-const THEME_KEY = 'rm-theme';
+export type { Theme };
 
 /**
  * Logos shown in the footer next to the Radar Meteorology mark.
@@ -12,16 +12,6 @@ const THEME_KEY = 'rm-theme';
  *   { src: '/logos/imd.png', alt: 'India Meteorological Department' }
  */
 const FOOTER_LOGOS: { src: string; alt: string }[] = [];
-
-function initialTheme(): Theme {
-  try {
-    const saved = localStorage.getItem(THEME_KEY);
-    if (saved === 'light' || saved === 'dark') return saved;
-  } catch {
-    /* storage unavailable */
-  }
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
 
 /** Shared header + footer + theme for the public pages (landing, login, team…). */
 export function Site({
@@ -31,27 +21,7 @@ export function Site({
   children: (theme: Theme) => ReactNode;
   showDashboard?: boolean;
 }) {
-  const [theme, setTheme] = useState<Theme>(initialTheme);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(THEME_KEY, theme);
-    } catch {
-      /* storage unavailable */
-    }
-    document
-      .querySelector('meta[name="theme-color"]')
-      ?.setAttribute('content', theme === 'dark' ? '#0b1418' : '#f5f6f3');
-    document.body.style.backgroundColor = theme === 'dark' ? '#0a1317' : '#f4f6f2';
-  }, [theme]);
-
-  useEffect(
-    () => () => {
-      document.body.style.backgroundColor = '';
-      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#f5f6f3');
-    },
-    [],
-  );
+  const [theme, setTheme] = useTheme();
 
   return (
     <div className="lp" data-theme={theme}>

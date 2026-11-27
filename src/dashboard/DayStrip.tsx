@@ -96,7 +96,7 @@ export default function DayStrip({
               patternUnits="userSpaceOnUse"
               patternTransform="rotate(45)"
             >
-              <line x1="0" y1="0" x2="0" y2="6" stroke="#c9d2c6" strokeWidth="2" />
+              <line x1="0" y1="0" x2="0" y2="6" className="strip-gap-line" strokeWidth="2" />
             </pattern>
           </defs>
           <line x1={0} x2={W} y1={BASE} y2={BASE} className="strip-axis" />

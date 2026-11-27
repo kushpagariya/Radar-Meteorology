@@ -10,11 +10,14 @@ import {
   FolderOpen,
   Layers,
   Link2,
+  Moon,
   Plus,
   Radar,
+  Sun,
   X,
 } from 'lucide-react';
 import { Brand } from '../Brand';
+import { useTheme } from '../theme';
 import {
   DEMO_ELEVATIONS,
   demoScan,
@@ -66,6 +69,7 @@ const PAGE_INTROS: Record<Page, string> = {
 const FULL_RANGE = 2000;
 
 export default function Dashboard({ page }: { page: Page }) {
+  const [theme, setTheme] = useTheme();
   const [state, setState] = useState<ViewState>(() => readState(parseRoute(window.location.hash).params));
   const set = useCallback((patch: Partial<ViewState>) => setState((s) => ({ ...s, ...patch })), []);
   const [playing, setPlaying] = useState(false);
@@ -405,7 +409,7 @@ export default function Dashboard({ page }: { page: Page }) {
   }
 
   return (
-    <div className="dashboard">
+    <div className="dashboard" data-theme={theme}>
       <a className="skip-link" href="#workspace-content">
         Skip to workspace
       </a>
@@ -470,6 +474,14 @@ export default function Dashboard({ page }: { page: Page }) {
               onClick={() => goTo('methods')}
             >
               <CircleHelp size={19} />
+            </button>
+            <button
+              className="icon-button theme-toggle"
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+            >
+              {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
             </button>
             <span className="user-avatar" title="Guest researcher">
               R

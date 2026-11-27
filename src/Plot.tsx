@@ -60,8 +60,19 @@ export default function Plot({
   const [probe, setProbe] = useState<Gate | null>(null);
   const [pan, setPan] = useState({ x: 0, y: 0 }),
     [zoom, setZoom] = useState(1);
+  const [dark, setDark] = useState(false);
   const drag = useRef<{ x: number; y: number; px: number; py: number; moved: boolean } | null>(null);
   const keyboardProbe = useRef(false);
+
+  useEffect(() => {
+    const host = ref.current?.closest('[data-theme]');
+    if (!host) return;
+    const sync = () => setDark(host.getAttribute('data-theme') === 'dark');
+    sync();
+    const mo = new MutationObserver(sync);
+    mo.observe(host, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => mo.disconnect();
+  }, [ref]);
 
   useEffect(() => {
     setPan({ x: 0, y: 0 });
@@ -84,12 +95,12 @@ export default function Plot({
         radius = Math.min(w, h) * 0.405 * zoom,
         scale = radius / range;
       const km = (east: number, north: number) => [cx + east * scale, cy - north * scale] as const;
-      ctx.fillStyle = map ? '#edf0e9' : '#f8faf8';
+      ctx.fillStyle = dark ? (map ? '#0c181d' : '#0b1519') : map ? '#edf0e9' : '#f8faf8';
       ctx.fillRect(0, 0, w, h);
 
       if (map) {
         // Illustrative Ghats escarpment contours and sea, positioned in km from the radar so they follow pan/zoom.
-        ctx.strokeStyle = '#cfd7cc';
+        ctx.strokeStyle = dark ? '#1e333a' : '#cfd7cc';
         ctx.lineWidth = 1;
         for (let k = -8; k < 16; k++) {
           ctx.beginPath();
@@ -100,7 +111,7 @@ export default function Plot({
           }
           ctx.stroke();
         }
-        ctx.fillStyle = '#dce8e5';
+        ctx.fillStyle = dark ? '#10242b' : '#dce8e5';
         ctx.beginPath();
         for (let north = 260; north >= -260; north -= 4) {
           const [x, y] = km(-70 + Math.sin(north / 22) * 5 + Math.sin(north / 9) * 2, north);
@@ -146,14 +157,14 @@ export default function Plot({
       ctx.globalAlpha = 1;
 
       if (rings) {
-        ctx.strokeStyle = '#657f7c50';
+        ctx.strokeStyle = dark ? 'rgba(142, 162, 157, 0.28)' : '#657f7c50';
         ctx.lineWidth = 0.7;
         for (let i = 1; i <= 4; i++) {
           ctx.beginPath();
           ctx.arc(cx, cy, (radius * i) / 4, 0, Math.PI * 2);
           ctx.stroke();
           if (!compact) {
-            ctx.fillStyle = '#4f6563';
+            ctx.fillStyle = dark ? '#9bb0aa' : '#4f6563';
             ctx.font = '12px "DM Sans", sans-serif';
             ctx.fillText(formatDistance((range * i) / 4), cx + 8, cy - (radius * i) / 4 + 14);
           }
@@ -167,7 +178,7 @@ export default function Plot({
         ctx.stroke();
         ctx.setLineDash([]);
       }
-      ctx.fillStyle = '#254c4d';
+      ctx.fillStyle = dark ? '#5fd0c6' : '#254c4d';
       ctx.beginPath();
       ctx.arc(cx, cy, 3.5, 0, Math.PI * 2);
       ctx.fill();
@@ -177,7 +188,7 @@ export default function Plot({
         const x = cx + Math.sin(t) * g.range * scale,
           y = cy - Math.cos(t) * g.range * scale;
         if (style === 'pin') {
-          ctx.strokeStyle = '#1e3f3f';
+          ctx.strokeStyle = dark ? '#e7f0ed' : '#1e3f3f';
           ctx.lineWidth = 1;
           ctx.setLineDash([2, 4]);
           ctx.beginPath();
@@ -186,13 +197,13 @@ export default function Plot({
           ctx.stroke();
           ctx.setLineDash([]);
           ctx.lineWidth = 2;
-          ctx.fillStyle = '#ffffff';
+          ctx.fillStyle = dark ? '#0b1519' : '#ffffff';
           ctx.beginPath();
           ctx.arc(x, y, 6, 0, Math.PI * 2);
           ctx.fill();
           ctx.stroke();
         } else {
-          ctx.strokeStyle = '#1e3f3f';
+          ctx.strokeStyle = dark ? '#e7f0ed' : '#1e3f3f';
           ctx.lineWidth = 1.5;
           ctx.beginPath();
           ctx.moveTo(x - 8, y);
@@ -207,7 +218,7 @@ export default function Plot({
 
       if (!compact) {
         ctx.font = '12px "DM Sans", sans-serif';
-        ctx.fillStyle = '#49635e';
+        ctx.fillStyle = dark ? '#9bb0aa' : '#49635e';
         ctx.textAlign = 'center';
         ctx.fillText('N', cx, cy - radius - 15);
         ctx.fillText('S', cx, cy + radius + 22);
@@ -219,13 +230,13 @@ export default function Plot({
             const [east, north] = offsetKm(scan.latitude, scan.longitude, lat, lon);
             const [x, y] = km(east, north);
             if (x < -80 || x > w + 10 || y < 0 || y > h + 10) return;
-            ctx.fillStyle = '#51625b';
+            ctx.fillStyle = dark ? '#9bb0aa' : '#51625b';
             ctx.beginPath();
             ctx.arc(x, y, 2.5, 0, Math.PI * 2);
             ctx.fill();
-            ctx.fillStyle = '#f5f7f1e0';
+            ctx.fillStyle = dark ? 'rgba(16, 29, 34, 0.88)' : '#f5f7f1e0';
             ctx.fillRect(x + 5, y - 14, ctx.measureText(name).width + 8, 19);
-            ctx.fillStyle = '#51625b';
+            ctx.fillStyle = dark ? '#c8d6d2' : '#51625b';
             ctx.fillText(name, x + 9, y);
           });
         }
@@ -235,7 +246,7 @@ export default function Plot({
     observer.observe(canvas);
     draw();
     return () => observer.disconnect();
-  }, [scan, transform, palette, range, min, max, map, rings, compact, pan, zoom, ref, threshold, pin, probe]);
+  }, [scan, transform, palette, range, min, max, map, rings, compact, pan, zoom, ref, threshold, pin, probe, dark]);
 
   function locate(e: React.PointerEvent<HTMLCanvasElement>): Gate {
     const box = e.currentTarget.getBoundingClientRect(),
