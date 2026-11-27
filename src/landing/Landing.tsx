@@ -97,7 +97,7 @@ function RadarStage({ theme }: { theme: Theme }) {
         </Suspense>
       </SceneBoundary>
       <div className="lp-stage-top">
-        <span className="lp-stage-note">Representative model · radome-housed X-band DWR</span>
+        <span className="lp-stage-note">Representative model ·</span>
         {!still && scanEl !== null && (
           <span className="lp-chip live" aria-live="off">
             <i /> Scanning {scanEl.toFixed(1)}°
@@ -126,8 +126,11 @@ function RadarStage({ theme }: { theme: Theme }) {
 }
 
 export default function Landing() {
+  const [rippleKey, setRippleKey] = useState(0);
+  const triggerRipple = () => setRippleKey((k) => k + 1);
+
   return (
-    <Site>
+    <Site showDashboard={false}>
       {(theme) => (
         <section className="lp-hero">
           <div className="lp-aurora" aria-hidden="true" />
@@ -136,7 +139,19 @@ export default function Landing() {
               <h1>Mahabaleshwar X&#8209;band Weather Radar</h1>
               <p>Radar data viewing and analysis for the Doppler Weather Radar at Mahabaleshwar.</p>
               <div className="lp-cta">
-                <a className="lp-btn lp-btn-primary" href="#/login">
+                <a
+                  className="lp-btn lp-btn-primary lp-btn-radar"
+                  href="#/login"
+                  onMouseEnter={triggerRipple}
+                  onClick={triggerRipple}
+                >
+                  {rippleKey > 0 && (
+                    <span key={rippleKey} className="lp-radar-ripples" aria-hidden="true">
+                      <span className="lp-radar-ring" />
+                      <span className="lp-radar-ring" />
+                      <span className="lp-radar-ring" />
+                    </span>
+                  )}
                   Dashboard <ArrowUpRight size={17} />
                 </a>
               </div>

@@ -140,6 +140,49 @@
   background: var(--btn-bg-hover);
   transform: translateY(-1px);
 }
+.lp .lp-btn-radar {
+  position: relative;
+  overflow: hidden;
+}
+.lp-radar-ripples {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.lp-radar-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, currentColor 42%, transparent);
+  transform: translate(-50%, -50%) scale(0.4);
+  opacity: 0;
+  animation: lp-radar-ripple 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.lp-radar-ring:nth-child(2) {
+  animation-delay: 0.14s;
+}
+.lp-radar-ring:nth-child(3) {
+  animation-delay: 0.28s;
+}
+@keyframes lp-radar-ripple {
+  0% {
+    transform: translate(-50%, -50%) scale(0.4);
+    opacity: 0.55;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(10);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-radar-ring {
+    animation: none;
+    opacity: 0;
+  }
+}
 .lp .lp-btn-ghost {
   background: transparent;
   color: var(--ink);
