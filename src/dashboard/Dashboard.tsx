@@ -642,7 +642,7 @@ export default function Dashboard({ page }: { page: Page }) {
                     {demo
                       ? '15 July 2026 · 6 scans × 4 elevations · synthetic reflectivity'
                       : dayCatalog
-                        ? `${dayCatalog.volume_count} volumes × ${dayCatalog.fixed_angles.length} sweeps · X-band ${dayCatalog.site.frequency_ghz.toFixed(2)} GHz dual-pol · ${dayCatalog.site.latitude.toFixed(3)}° N, ${dayCatalog.site.longitude.toFixed(3)}° E, ${Math.round(dayCatalog.site.altitude_m)} m${dayCatalog.gaps.length ? ` · ${dayCatalog.gaps.reduce((n, g) => n + g.missing_volumes, 0)} missing` : ''}`
+                        ? `${dayCatalog.volume_count} volumes × ${dayCatalog.fixed_angles.length} sweeps · X-band ${dayCatalog.site.frequency_ghz.toFixed(2)} GHz dual-pol · ${Math.round(dayCatalog.site.altitude_m)} m${dayCatalog.gaps.length ? ` · ${dayCatalog.gaps.reduce((n, g) => n + g.missing_volumes, 0)} missing` : ''}`
                         : 'Uploaded NetCDF · local session · original file preserved'}
                   </span>
                 </div>
