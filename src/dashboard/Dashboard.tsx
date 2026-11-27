@@ -10,6 +10,7 @@ import {
   FolderOpen,
   Layers,
   Link2,
+  Mail,
   Moon,
   Plus,
   Radar,
@@ -18,6 +19,7 @@ import {
 } from 'lucide-react';
 import { Brand } from '../Brand';
 import { useTheme } from '../theme';
+import { getProfileInitials, readUserProfile } from '../userProfile';
 import {
   DEMO_ELEVATIONS,
   demoScan,
@@ -51,11 +53,11 @@ import {
 import { useBackend, type Uploaded } from './useBackend';
 
 const PAGES: { id: Page; label: string; icon: typeof Radar }[] = [
-  { id: 'workspace', label: 'Radar workspace', icon: Radar },
+  { id: 'workspace', label: 'Dashboard', icon: Radar },
   { id: 'library', label: 'Data library', icon: FolderOpen },
 ];
 const PAGE_TITLES: Record<Page, string> = {
-  workspace: 'Radar workspace',
+  workspace: 'Dashboard',
   library: 'Data library',
   methods: 'Data & methodology',
 };
@@ -71,6 +73,36 @@ const FULL_RANGE = 2000;
 
 export default function Dashboard({ page }: { page: Page }) {
   const [theme, setTheme] = useTheme();
+  const profile = useMemo(() => readUserProfile(), []);
+  const profileInitials = useMemo(() => getProfileInitials(profile.name), [profile.name]);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profilePinned, setProfilePinned] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+  const profileLeaveTimer = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (!profileOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+        setProfileOpen(false);
+        setProfilePinned(false);
+      }
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setProfileOpen(false);
+        setProfilePinned(false);
+      }
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [profileOpen]);
+
+  useEffect(() => () => window.clearTimeout(profileLeaveTimer.current), []);
   const [state, setState] = useState<ViewState>(() => readState(parseRoute(window.location.hash).params));
   const set = useCallback((patch: Partial<ViewState>) => setState((s) => ({ ...s, ...patch })), []);
   const [playing, setPlaying] = useState(false);
@@ -483,9 +515,62 @@ export default function Dashboard({ page }: { page: Page }) {
             >
               {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
             </button>
-            <span className="user-avatar" title="Guest researcher">
-              R
-            </span>
+            <div
+              className="user-menu"
+              ref={profileMenuRef}
+              onMouseEnter={() => {
+                window.clearTimeout(profileLeaveTimer.current);
+                setProfileOpen(true);
+              }}
+              onMouseLeave={() => {
+                if (profilePinned) return;
+                profileLeaveTimer.current = window.setTimeout(() => setProfileOpen(false), 120);
+              }}
+            >
+              <button
+                type="button"
+                className="user-avatar"
+                aria-label="User profile"
+                aria-expanded={profileOpen}
+                aria-haspopup="dialog"
+                title={profile.name}
+                onClick={() => {
+                  window.clearTimeout(profileLeaveTimer.current);
+                  setProfilePinned((p) => {
+                    const next = !p;
+                    setProfileOpen(next);
+                    return next;
+                  });
+                }}
+              >
+                {profile.photo ? (
+                  <img src={profile.photo} alt={profile.name} className="user-avatar-img" />
+                ) : (
+                  profileInitials
+                )}
+              </button>
+              {profileOpen && (
+                <div className="user-profile-card" role="dialog" aria-label="User profile details">
+                  <div className="user-profile-head">
+                    <span className="user-profile-avatar" aria-hidden="true">
+                      {profile.photo ? (
+                        <img src={profile.photo} alt="" className="user-avatar-img" />
+                      ) : (
+                        profileInitials
+                      )}
+                    </span>
+                    <div className="user-profile-meta">
+                      <strong>{profile.name}</strong>
+                      <span>{profile.role}</span>
+                    </div>
+                  </div>
+                  <div className="user-profile-email">
+                    <Mail size={13} aria-hidden="true" />
+                    <span>{profile.email || 'Guest session'}</span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </header>
         <main id="workspace-content" className="dashboard-main">
@@ -495,12 +580,6 @@ export default function Dashboard({ page }: { page: Page }) {
                 <h1>{PAGE_TITLES[page]}</h1>
                 <p>{PAGE_INTROS[page]}</p>
               </div>
-              {page === 'library' && (
-                <button className="btn btn-primary" disabled={busy} onClick={() => fileInput.current?.click()}>
-                  <Plus size={16} />
-                  Upload data
-                </button>
-              )}
             </div>
           )}
           <input

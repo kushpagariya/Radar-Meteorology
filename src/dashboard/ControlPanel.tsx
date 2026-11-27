@@ -1,4 +1,5 @@
-import { CircleHelp, SlidersHorizontal } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Check, CircleHelp, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import {
   DBZ_FIELDS,
   DEMO_ELEVATIONS,
@@ -46,6 +47,18 @@ export default function ControlPanel({
   const preset = ZR_PRESETS.find((p) => p.id === state.zr) ?? ZR_PRESETS[0];
   const showsRain = state.field === 'rainfall' || state.view === 'accum';
   const fixedScale = state.view === 'accum' || (state.view === 'compare' && state.compareMode === 'diff');
+  const [resetDone, setResetDone] = useState(false);
+  const resetTimer = useRef<number | undefined>(undefined);
+
+  useEffect(() => () => window.clearTimeout(resetTimer.current), []);
+
+  function handleReset() {
+    onReset();
+    setResetDone(true);
+    window.clearTimeout(resetTimer.current);
+    resetTimer.current = window.setTimeout(() => setResetDone(false), 2000);
+  }
+
   return (
     <aside className="control-panel" aria-label="Scan settings">
       <div className="control-title">
@@ -288,9 +301,18 @@ export default function ControlPanel({
               : 'Only supported polar reflectivity fields are shown. Coordinate and unit checks run in Python.'}
         </p>
       </div>
-      <button className="text-button reset-controls" onClick={onReset}>
+      <button type="button" className="btn btn-outline reset-controls" onClick={handleReset}>
+        <RotateCcw size={13} aria-hidden="true" />
         Reset settings
       </button>
+      {resetDone && (
+        <div className="reset-confirmation" role="status" aria-live="polite">
+          <span className="reset-check" aria-hidden="true">
+            <Check size={12} strokeWidth={2.5} />
+          </span>
+          <span>Settings successfully reset!</span>
+        </div>
+      )}
     </aside>
   );
 }

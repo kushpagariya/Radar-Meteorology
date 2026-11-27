@@ -5,6 +5,7 @@ import {
   Check,
   Download,
   FileText,
+  FolderOpen,
   LoaderCircle,
   Search,
   Trash2,
@@ -49,7 +50,6 @@ export default function Library({
           <h2 id="archive-title">
             Radar archive <span>{archiveDays.length}</span>
           </h2>
-          <span className="archive-hint">Full days loaded from a .zip file or a folder</span>
         </div>
         {archiveDays.length ? (
           <div className="archive-days">
@@ -137,11 +137,13 @@ export default function Library({
           <span>{service ? 'Data service connected' : 'Data service not running: start it with npm run backend'}</span>
         </div>
         <div className="library-import-actions">
-          <button className="btn btn-outline" disabled={busy} onClick={onChoose}>
-            {busy ? 'Please wait…' : 'Choose file'}
+          <button type="button" className="btn btn-upload-blue" disabled={busy} onClick={onChoose}>
+            <Upload size={14} aria-hidden="true" />
+            <span>{busy ? 'Please wait…' : 'Upload file'}</span>
           </button>
-          <button className="btn btn-outline" disabled={busy} onClick={onChooseFolder}>
-            Choose folder
+          <button type="button" className="btn btn-upload-blue" disabled={busy} onClick={onChooseFolder}>
+            <FolderOpen size={14} aria-hidden="true" />
+            <span>Upload folder</span>
           </button>
         </div>
       </div>

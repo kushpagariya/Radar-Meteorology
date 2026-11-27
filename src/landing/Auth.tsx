@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { AlertCircle, Building2, Check, Eye, EyeOff, LoaderCircle, Mail, User } from 'lucide-react';
+import { saveLoginProfile, saveRegisteredProfile } from '../userProfile';
 import { Site } from './Site';
 
 /*
@@ -73,6 +74,7 @@ export function Login() {
 
     setError('');
     setLoading(true);
+    saveLoginProfile(trimmedUser);
     const startedAt = performance.now();
     // Existing placeholder auth completes immediately; keep the authenticating state visible for ~1.4s total.
     const remaining = Math.max(0, 1400 - (performance.now() - startedAt));
@@ -222,6 +224,7 @@ export function Register() {
 
     setError('');
     setLoading(true);
+    saveRegisteredProfile(trimmedName, trimmedEmail);
     // Existing placeholder registration completes immediately; show brief loading, then success confirmation before redirecting to login.
     timers.current.push(
       window.setTimeout(() => {
